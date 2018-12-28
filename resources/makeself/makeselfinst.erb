@@ -24,10 +24,31 @@ INSTALL_DIR=<%= install_dir %>
 #########################################################################
 # MOVE SELF-EXTRACTING ARCHIVE FILES INTO PLACE
 #########################################################################
-rm -rf $INSTALL_DIR/* || error_exit "Cannot remove contents of $INSTALL_DIR"
-mkdir -p $INSTALL_DIR || error_exit "Cannot create $INSTALL_DIR"
-cp -R $EXTRACT_DIR $INSTALL_DIR || error_exit "Cannot install to $INSTALL_DIR"
-rm -f $INSTALL_DIR/$PROGNAME
+
+INSTALL_DIR=${INSTALL_DIR%/}
+BACKUP_DIR=$(mktemp -d -u "${INSTALL_DIR}-$(date +%Y%m%d-%H%M%S).XXXX")
+NEW_DIR=${BACKUP_DIR}-new
+
+if test -e "$BACKUP_DIR"
+then
+  rm -rf "$BACKUP_DIR"
+fi
+
+if test -e "$NEW_DIR"
+then
+  rm -rf "$NEW_DIR"
+fi
+
+mkdir -p "$NEW_DIR"             || error_exit "Cannot create new install dir: $NEW_DIR"
+cp -R "$EXTRACT_DIR" "$NEW_DIR" || error_exit "Cannot install to new install dir: $NEW_DIR"
+
+if test -e "$INSTALL_DIR"
+then
+  mv "$INSTALL_DIR" "$BACKUP_DIR" || error_exit "Cannot rename $INSTALL_DIR to $BACKUP_DIR"
+fi
+
+mv "$NEW_DIR" "$INSTALL_DIR"    || error_exit "Cannot rename $NEW_DIR to $INSTALL_DIR"
+rm -f "$INSTALL_DIR/$PROGNAME"
 
 # Execute the optional postinst script
 if test -f "$INSTALL_DIR/postinst"; then
